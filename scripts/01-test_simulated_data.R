@@ -1,89 +1,62 @@
 #### Preamble ####
-# Purpose: Tests the structure and validity of the simulated Australian 
-  #electoral divisions dataset.
-# Author: Rohan Alexander
-# Date: 26 September 2024
-# Contact: rohan.alexander@utoronto.ca
+# Purpose: To perform data integrity, descriptive statistics, and data consistency tests on the simulated polling data.
+# Author: Ruizi Liu, Yuechen Zhang, Bruce Zhang
+# Date: 4 November 2024
+# Contact: ruizi.liu@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: 
-  # - The `tidyverse` package must be installed and loaded
-  # - 00-simulate_data.R must have been run
+# Pre-requisites: Ensure the `dplyr` package is installed and loaded.
+#                 The dataset (`simulated_data.csv`) should be available in the specified path.
+#                 This script assumes columns for `poll_id`, `pct`, `pollscore`, `start_date`, `end_date`, `state`, `methodology`, and others are present.
 # Any other information needed? Make sure you are in the `starter_folder` rproj
 
 
 #### Workspace setup ####
-library(tidyverse)
+library(dplyr)
 
-analysis_data <- read_csv("data/00-simulated_data/simulated_data.csv")
-
-# Test if the data was successfully loaded
-if (exists("analysis_data")) {
-  message("Test Passed: The dataset was successfully loaded.")
-} else {
-  stop("Test Failed: The dataset could not be loaded.")
-}
+# Read the data
+data <- read_csv(here::here("data/00-simulated_data/simulated_data.csv"))
 
 
-#### Test data ####
+# Data Integrity Tests
+# 1. Check for missing values in each column
+missing_values <- sapply(data, function(x) sum(is.na(x)))
+print(missing_values)
 
-# Check if the dataset has 151 rows
-if (nrow(analysis_data) == 151) {
-  message("Test Passed: The dataset has 151 rows.")
-} else {
-  stop("Test Failed: The dataset does not have 151 rows.")
-}
+# 2. Check data types for important columns (e.g., `poll_id`, `pct`, `pollscore` should be numeric)
+is_poll_id_numeric <- is.numeric(data$poll_id)
+is_pct_numeric <- is.numeric(data$pct)
+is_pollscore_numeric <- is.numeric(data$pollscore)
+print(is_poll_id_numeric)
+print(is_pct_numeric)
+print(is_pollscore_numeric)
 
-# Check if the dataset has 3 columns
-if (ncol(analysis_data) == 3) {
-  message("Test Passed: The dataset has 3 columns.")
-} else {
-  stop("Test Failed: The dataset does not have 3 columns.")
-}
+# Descriptive Statistics Tests
+# 3. Check if pct is within 0 to 100 range
+pct_range <- all(data$pct >= 0 & data$pct <= 100)
+print(pct_range)
 
-# Check if all values in the 'division' column are unique
-if (n_distinct(analysis_data$division) == nrow(analysis_data)) {
-  message("Test Passed: All values in 'division' are unique.")
-} else {
-  stop("Test Failed: The 'division' column contains duplicate values.")
-}
+# 4. Check if pollscore is within a reasonable range, assuming between -10 and 10
+pollscore_range <- all(!is.na(data$pollscore) & data$pollscore >= -10 & data$pollscore <= 10)
+print(pollscore_range)
 
-# Check if the 'state' column contains only valid Australian state names
-valid_states <- c("New South Wales", "Victoria", "Queensland", "South Australia", 
-                  "Western Australia", "Tasmania", "Northern Territory", 
-                  "Australian Capital Territory")
+# 5. Check the distribution of categorical variables like `state` and `methodology`
+state_distribution <- table(data$state)
+methodology_distribution <- table(data$methodology)
+print(state_distribution)
+print(methodology_distribution)
 
-if (all(analysis_data$state %in% valid_states)) {
-  message("Test Passed: The 'state' column contains only valid Australian state names.")
-} else {
-  stop("Test Failed: The 'state' column contains invalid state names.")
-}
+# Data Consistency Tests
+# 6. Verify if start_date is earlier than end_date
+data$start_date <- as.Date(data$start_date, format="%Y-%m-%d")
+data$end_date <- as.Date(data$end_date, format="%Y-%m-%d")
+date_consistency <- all(data$start_date <= data$end_date)
+print(date_consistency)
 
-# Check if the 'party' column contains only valid party names
-valid_parties <- c("Labor", "Liberal", "Greens", "National", "Other")
+# 7. Verify that each `poll_id` is unique within each combination of `pollster_id` and `start_date`
+unique_poll_id <- nrow(data) == nrow(distinct(data, poll_id, pollster_id, start_date))
+print(unique_poll_id)
 
-if (all(analysis_data$party %in% valid_parties)) {
-  message("Test Passed: The 'party' column contains only valid party names.")
-} else {
-  stop("Test Failed: The 'party' column contains invalid party names.")
-}
+# 8. Check for valid sample sizes in `sample_size`, ensuring no negative values and reasonable range
+sample_size_valid <- all(!is.na(data$sample_size) & data$sample_size > 0 & data$sample_size < 100000)
+print(sample_size_valid)
 
-# Check if there are any missing values in the dataset
-if (all(!is.na(analysis_data))) {
-  message("Test Passed: The dataset contains no missing values.")
-} else {
-  stop("Test Failed: The dataset contains missing values.")
-}
-
-# Check if there are no empty strings in 'division', 'state', and 'party' columns
-if (all(analysis_data$division != "" & analysis_data$state != "" & analysis_data$party != "")) {
-  message("Test Passed: There are no empty strings in 'division', 'state', or 'party'.")
-} else {
-  stop("Test Failed: There are empty strings in one or more columns.")
-}
-
-# Check if the 'party' column has at least two unique values
-if (n_distinct(analysis_data$party) >= 2) {
-  message("Test Passed: The 'party' column contains at least two unique values.")
-} else {
-  stop("Test Failed: The 'party' column contains less than two unique values.")
-}

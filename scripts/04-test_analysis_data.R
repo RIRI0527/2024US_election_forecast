@@ -1,69 +1,55 @@
 #### Preamble ####
-# Purpose: Tests... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 26 September 2024 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: To perform data integrity, descriptive statistics, and data consistency tests on polling data.
+# Author: Ruizi Liu, Yuechen Zhang, Bruce Zhang
+# Date: 4 November 2024
+# Contact: ruizi.liu@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
+# Pre-requisites: Run the files "02-download_data.R" and "03-clean_data.R".
+# Any other information needed? Make sure you are in the `starter_folder` rproj
 
 
 #### Workspace setup ####
-library(tidyverse)
-library(testthat)
+library(dplyr)
 
-data <- read_csv("data/02-analysis_data/analysis_data.csv")
+data <- read_csv(here::here("data/02-analysis_data/analysis_data.csv"))
 
+# Data Integrity Tests
+# Check for missing values in each column
+missing_values <- sapply(data, function(x) sum(is.na(x)))
+print(missing_values)
 
-#### Test data ####
-# Test that the dataset has 151 rows - there are 151 divisions in Australia
-test_that("dataset has 151 rows", {
-  expect_equal(nrow(analysis_data), 151)
-})
+# Verify data types (check if pct and pollscore are numeric)
+is_pct_numeric <- is.numeric(data$pct)
+is_pollscore_numeric <- is.numeric(data$pollscore)
+print(is_pct_numeric)
+print(is_pollscore_numeric)
 
-# Test that the dataset has 3 columns
-test_that("dataset has 3 columns", {
-  expect_equal(ncol(analysis_data), 3)
-})
+# Descriptive Statistics Tests
+# Check if pct is within the range 0 to 100
+pct_range <- all(data$pct >= 0 & data$pct <= 100)
+print(pct_range)
 
-# Test that the 'division' column is character type
-test_that("'division' is character", {
-  expect_type(analysis_data$division, "character")
-})
+# Check reasonable range for pollscore (assuming -10 to 10)
+pollscore_range <- all(data$pollscore >= -10 & data$pollscore <= 10)
+print(pollscore_range)
 
-# Test that the 'party' column is character type
-test_that("'party' is character", {
-  expect_type(analysis_data$party, "character")
-})
+# Check distribution of categorical variables state and methodology
+state_distribution <- table(data$state)
+methodology_distribution <- table(data$methodology)
+print(state_distribution)
+print(methodology_distribution)
 
-# Test that the 'state' column is character type
-test_that("'state' is character", {
-  expect_type(analysis_data$state, "character")
-})
+# Data Consistency Tests
+# Verify if start_date is earlier than end_date
+# Convert dates to Date type
+data$start_date <- as.Date(data$start_date, format="%m/%d/%y")
+data$end_date <- as.Date(data$end_date, format="%Y-%m-%d")
 
-# Test that there are no missing values in the dataset
-test_that("no missing values in dataset", {
-  expect_true(all(!is.na(analysis_data)))
-})
+# Check if start_date < end_date
+date_consistency <- all(data$start_date <= data$end_date)
+print(date_consistency)
 
-# Test that 'division' contains unique values (no duplicates)
-test_that("'division' column contains unique values", {
-  expect_equal(length(unique(analysis_data$division)), 151)
-})
+# Unique Identifier Test (assuming there is a unique identifier column 'poll_id')
+# is_unique <- nrow(data) == nrow(distinct(data, poll_id))
+# print(is_unique)
 
-# Test that 'state' contains only valid Australian state or territory names
-valid_states <- c("New South Wales", "Victoria", "Queensland", "South Australia", "Western Australia", 
-                  "Tasmania", "Northern Territory", "Australian Capital Territory")
-test_that("'state' contains valid Australian state names", {
-  expect_true(all(analysis_data$state %in% valid_states))
-})
-
-# Test that there are no empty strings in 'division', 'party', or 'state' columns
-test_that("no empty strings in 'division', 'party', or 'state' columns", {
-  expect_false(any(analysis_data$division == "" | analysis_data$party == "" | analysis_data$state == ""))
-})
-
-# Test that the 'party' column contains at least 2 unique values
-test_that("'party' column contains at least 2 unique values", {
-  expect_true(length(unique(analysis_data$party)) >= 2)
-})
